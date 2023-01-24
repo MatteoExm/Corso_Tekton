@@ -1,0 +1,22 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: step-template-ex
+spec:
+  stepTemplate:
+    env:
+      - name: "FOO"
+        value: "bar"
+  steps:
+    - name: step1
+      image: ubuntu
+      command: [echo]
+      args: ["FOO is ${FOO}"]
+    
+    - name: step2
+      image: ubuntu
+      command: [echo]
+      args: ["FOO is ${FOO}"]
+      env:
+        - name: "FOO"
+          value: "baz"

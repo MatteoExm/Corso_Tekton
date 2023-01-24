@@ -1,0 +1,26 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: non-root-task
+spec:
+  steps:
+    - name: write
+      image: ubuntu
+      script: |
+        sleep 1d
+
+--- 
+
+apiVersion: tekton.dev/v1beta1
+kind: TaskRun
+metadata:
+  name: non-root-tr
+spec:
+  taskRef:
+    name: non-root-task
+  podTemplate:
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 3000
+

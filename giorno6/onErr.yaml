@@ -1,0 +1,31 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: fail-task
+spec:
+  
+  steps:
+  - name: exit-with-error
+    image: ubuntu
+    onError: continue
+    script: |
+      #!/bin/bash
+
+      echo "Adesso il task fallirà"
+      # leggo file che non esiste
+      cat /foo.txt
+
+  - name: after-error
+    image: ubuntu
+    script: |
+      #!/bin/bash
+      if [[ $(cat $(steps.step-exit-with-error.exitCode.path)) -gt 0 ]]
+      then
+        RESULT=FAILED
+      else
+        RESULT=SUCCESS
+      fi
+
+      echo "Lo step precendente è $RESULT "
+
+    

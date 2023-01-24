@@ -1,0 +1,31 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: pipeline-ex
+spec:
+  workspaces:
+    - name: output
+  params:
+    - name: file-output-name
+      default: "kustomizationSetup.sh"
+    - name: curl-params
+      default: ""
+    - name: file-url
+      default: "https://raw.githubsusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
+    
+
+  tasks:
+    - name: download-file
+      retries: 2
+      taskRef:
+        name: curl-download-file
+      params:
+        - name: file-output-name
+          value: $(params.file-output-name)
+        - name: file-url
+          value: "$(params.file-url)"
+        - name: curl-params
+          value: "$(params.curl-params[*])"
+      workspaces:
+        - name: output
+          workspace: output

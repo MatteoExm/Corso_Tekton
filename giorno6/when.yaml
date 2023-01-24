@@ -1,0 +1,141 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: pipeline-ex
+spec:
+  workspaces:
+    - name: output
+  params:
+    - name: file-output-name
+      default: "kustomizationSetup.sh"
+    - name: bash-cmd-parameters
+      type: array
+      default: 
+        - "-l"
+    - name: bash-command
+      default: ls
+    - name: curl-params
+      default: ""
+    - name: file-url
+      default: "https://raw.githusbusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
+    - name: script-failed
+      default: |
+        #!/bin/bash
+        echo -e "Pipeline complete with errors\n"
+        echo "to view failed task/s run --> kubectl get pod / tkn tr describe {taskRun/PipelineRun name} "
+
+  tasks:
+    - name: bash-exec
+      taskRef:
+        name: bash-cmd
+      params:
+        - name: file
+          value: "$(params.file-output-name)"
+        - name: command
+          value: "$(params.bash-command)"
+        - name: parameters
+          value: "$(params.bash-cmd-parameters[*])"
+      workspaces:
+        - name: output
+          workspace: output
+      runAfter: [download-file]
+    
+    - name: download-file
+      taskRef:
+        name: curl-download-file
+      params:
+        - name: file-output-name
+          value: $(params.file-output-name)
+        - name: file-url
+          value: "$(params.file-url)"
+        - name: curl-params
+          value: "$(params.curl-params[*])"
+      workspaces:
+        - name: output
+          workspace: output
+
+  finally:   
+    - name: finally-task-succeeded
+      params:
+        - name: script-success
+          value: |
+            #!/bin/bash
+            echo "Pipeline complete without errors"
+      when: 
+        - input: $(tasks.status)
+          operator: in
+          values: [Succeeded]
+      taskSpec:
+        params:
+          - name: script-success
+            default: $(params.script-success)
+        steps:
+          - image: ubuntu
+            name: success
+            script: |
+              $(params.script-success)
+
+    - name: finally-task-failed
+      params:
+        - name: pr-name 
+          value: "$(context.pipelineRun.name)"
+      when:
+        - input: $(tasks.status)
+          operator: in
+          values: ["Failed"]
+      taskSpec:
+        params:
+          - name: pr-name
+            default: ""
+          - name: script-failed
+            default: ""
+        steps:
+        - image: ubuntu
+          name: fail
+          script: |
+            #!/bin/bash
+            echo -e "Pipeline complete with errors\n"
+            echo "to view failed task/s run --> kubectl get pod / tkn pr describe $(params.pr-name) "
+---
+
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: curl-download-file
+spec:
+  workspaces:
+    - name: output
+  params:
+    - name: file-output-name
+    - name: file-url
+    - name: curl-params
+      type: array
+      default: []
+  steps:
+  - name: downlaod
+    image: shaky992/repo1:deb-curl
+    script: |
+      #!/bin/bash
+      curl $(params.file-url) > $(workspaces.output.path)/$(params.file-output-name)
+      #cat $(workspaces.output.path)/$(params.file-output-name)
+---
+
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: bash-cmd
+spec:
+  workspaces:
+    - name: output
+  params:
+    - name: file
+    - name: command
+    - name: parameters
+      default: []
+      type: array
+  steps:
+  - name: cmd
+    image: ubuntu
+    workingDir: $(workspaces.output.path)
+    command: ["$(params.command)"]
+    args: ["$(params.parameters[*])"]

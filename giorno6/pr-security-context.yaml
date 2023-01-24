@@ -1,0 +1,51 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: pipeline-show-user-id-run-
+spec:
+  podTemplate:
+    securityContext:
+      runAsUser: 1000
+      runAsGroup: 1000
+  taskRunSpecs:
+    - pipelineTaskName: root-container
+      taskPodTemplate:
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+  pipelineRef:
+    name: pipeline-show-user-id
+---
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: pipeline-show-user-id
+spec:
+  tasks:
+    - name: root-container
+      taskSpec:
+        steps:
+          - image: ubuntu
+            name: success
+            script: |
+              #!/bin/bash
+              id 
+              whoami
+    - name: non-root-tsk0
+      taskSpec:
+        steps:
+          - image: ubuntu
+            name: success
+            script: |
+              #!/bin/bash
+              id 
+              whoami
+    - name: non-root-tsk1
+      taskSpec:
+        steps:
+          - image: ubuntu
+            name: success
+            script: |
+              #!/bin/bash
+              id 
+              whoami
