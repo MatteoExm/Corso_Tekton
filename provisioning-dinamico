@@ -1,0 +1,38 @@
+server:
+
+sudo apt update
+sudo apt install nfs-kernel-server
+
+
+creare cartella da condividere
+
+mkdir {path/cartella} 
+chown nobody:nogroup {cartella}
+
+qual'ora vi fosse un firewall nfs usa porta 2049
+
+
+modificare file /etc/exports inserire il percorso della cartella più host con la quale condividere
+
+----
+ex:
+{path/cartella} k8s-master.k8s.local(rw,sync,no_root_squash,no_subtree_check,no_all_squash,insecure)
+----
+
+
+systemctl enable  nfs-kernel-server
+systemctl restart  nfs-kernel-server
+systemctl status  nfs-kernel-server
+
+verificare che le config siano correte, connettersi ai nodi in ssh e usare cmd
+
+		mount -t nfs {ip-server}:{path/cartella}
+
+
+---- helm install nfs-client ---
+
+helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/
+
+helm install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner \
+    --set nfs.server=x.x.x.x \
+    --set nfs.path={path/cartella}
